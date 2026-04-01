@@ -1,15 +1,27 @@
-torch>=2.0.0
-torchvision>=0.15.0
-pytorch-lightning>=2.1.0
+# Core deep learning
+torch>=2.1.0
+torchvision>=0.16.0
+transformers>=4.35.0
+ 
+# Video & image
 opencv-python>=4.8.0
-fastapi>=0.100.0
-uvicorn>=0.23.0
-yt-dlp>=2023.7.6
+yt-dlp>=2023.10.0
+retina-face>=0.0.14
+Pillow>=10.0.0
+ 
+# Explainability
+pytorch-grad-cam>=1.4.8
+ 
+# Serving
+fastapi>=0.104.0
+uvicorn>=0.24.0
+websockets>=12.0
+ 
+# Data
+kaggle>=1.5.16
 numpy>=1.24.0
-pandas>=2.0.0
+ 
+# Training utilities
+pytorch-lightning>=2.1.0
 scikit-learn>=1.3.0
-matplotlib>=3.7.0
-albumentations>=1.3.0
 tqdm>=4.66.0
-python-multipart>=0.0.6
-websockets>=11.0.3
