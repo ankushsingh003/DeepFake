@@ -82,3 +82,62 @@ class AugmentedVideoDataset(RawVideoDataset):
  
         return spatial, temporal, torch.tensor(label, dtype=torch.float32)
 
+
+
+# ── DataLoader factory with weighted sampling ──────────────────────────────────
+ 
+def get_augmented_dataloaders(
+    real_dir: str = "data/raw/real",
+    fake_dir: str = "data/raw/fake",
+    batch_size: int = 8,
+    clip_len: int = 16,
+    frame_skip: int = 3,
+    face_detect: bool = True,
+    cache_dir: str = "data/cache",
+    val_split: float = 0.15,
+    test_split: float = 0.10,
+    num_workers: int = 4,
+    seed: int = 42,
+    use_mixup: bool = False,
+):
+    """
+    Returns train/val/test DataLoaders with:
+    - WeightedRandomSampler on train (handles class imbalance)
+    - AugmentedVideoDataset on train
+    - Plain RawVideoDataset on val/test
+    """
+    from torch.utils.data import random_split
+ 
+    full = AugmentedVideoDataset(
+        real_dir=real_dir,
+        fake_dir=fake_dir,
+        clip_len=clip_len,
+        frame_skip=frame_skip,
+        face_detect=face_detect,
+        cache_dir=cache_dir,
+        is_train=True,
+    )
+ 
+    n = len(full)
+    n_val   = int(n * val_split)
+    n_test  = int(n * test_split)
+    n_train = n - n_val - n_test
+ 
+    g = torch.Generator().manual_seed(seed)
+    train_ds, val_ds, test_ds = random_split(full, [n_train, n_val, n_test], generator=g)
+ 
+    # Weighted sampler for training subset
+    train_labels = [full.samples[i][1] for i in train_ds.indices]
+    counts = [train_labels.count(0), train_labels.count(1)]
+    w_per_class = [1.0 / c if c > 0 else 0.0 for c in counts]
+    sample_w = [w_per_class[l] for l in train_labels]
+    sampler = WeightedRandomSampler(sample_w, num_samples=len(sample_w), replacement=True)
+ 
+    train_loader = DataLoader(train_ds, batch_size=batch_size, sampler=sampler,
+                              num_workers=num_workers, pin_memory=True)
+    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, pin_memory=True)
+    test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, pin_memory=True)
+ 
+    return train_loader, val_loader, test_loader
