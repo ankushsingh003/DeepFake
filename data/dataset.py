@@ -45,3 +45,40 @@ def mixup_batch(
  
     return mixed_spatial, mixed_temporal, mixed_labels
  
+
+
+# augmented dataset wrapper 
+
+
+
+
+class AugmentedVideoDataset(RawVideoDataset):
+    """
+    Wraps RawVideoDataset and applies clip-level augmentations on-the-fly.
+    is_train=True  → TRAIN_SPATIAL + temporal augments
+    is_train=False → VAL_SPATIAL   + no augments
+    """
+ 
+    def __init__(self, *args, is_train: bool = True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.is_train = is_train
+        self.spatial_transform = TRAIN_SPATIAL if is_train else VAL_SPATIAL
+ 
+    def __getitem__(self, idx):
+        path, label = self.samples[idx]
+ 
+        frames_raw = self._extract_frames(path)
+        frames_raw = self._crop_faces(frames_raw)
+ 
+        # Apply clip augmentations (temporal flip, noise, compression)
+        frames_raw = apply_clip_augmentations(frames_raw, is_train=self.is_train)
+ 
+        # Spatial: single representative frame
+        mid = len(frames_raw) // 2
+        spatial = self.spatial_transform(frames_raw[mid])
+ 
+        # Temporal clip
+        temporal = self._build_temporal(frames_raw)
+ 
+        return spatial, temporal, torch.tensor(label, dtype=torch.float32)
+
