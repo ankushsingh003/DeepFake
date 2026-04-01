@@ -1,47 +1,47 @@
-import torch
-from torch.utils_data import Dataset
-import os
-import cv2
-from PIL import Image
+import  torch 
+import numpy as np 
+from torch.utils.data import WeightedRandomSampler , DataLoader
+from data.dataset import RawVideoDataset
+from data.augment import TRAIN_SPATIAL, VAL_SPATIAL, apply_clip_augmentations
+ 
 
-class DeepfakeDataset(Dataset):
-    """
-    PyTorch Dataset for Deepfake Detection.
-    Assumes a folder-based structure: data/real and data/fake.
-    """
-    def __init__(self, root_dir, transform=None, sample_frames=16):
-        self.root_dir = root_dir
-        self.transform = transform
-        self.sample_frames = sample_frames
-        self.classes = ['real', 'fake']
-        self.data_paths = []
-        self.labels = []
-        
-        for idx, cls in enumerate(self.classes):
-            cls_dir = os.path.join(root_dir, cls)
-            if not os.path.exists(cls_dir):
-                continue
-            for video_name in os.listdir(cls_dir):
-                self.data_paths.append(os.path.join(cls_dir, video_name))
-                self.labels.append(idx)
-                
-    def __len__(self):
-        return len(self.data_paths)
-    
-    def __getitem__(self, idx):
-        video_path = self.data_paths[idx]
-        label = self.labels[idx]
-        
-        # Load video and extract frames (Simulated placeholder for actual video loading)
-        # In a real scenario, use cv2.VideoCapture to extract frames.
-        # We simulate this with a dummy tensor for now.
-        
-        # frames = load_and_sample(video_path, self.sample_frames)
-        # label_tensor = torch.tensor(label, dtype=torch.long)
-        
-        # return frames, label_tensor
-        return None, label
+# weightage sampler
 
-if __name__ == "__main__":
-    # Test directory creation for testing dataset class
-    pass
+def make_weighted_sampler(dataset: RawVideoDataset) -> WeightedRandomSampler:
+    """
+    Compute per-sample weights so each class is sampled equally,
+    regardless of how many videos exist per class.
+    """
+    labels = [label for _, label in dataset.samples]
+    class_counts = [labels.count(0), labels.count(1)]
+    weights_per_class = [1.0 / c if c > 0 else 0.0 for c in class_counts]
+    sample_weights = [weights_per_class[l] for l in labels]
+ 
+    return WeightedRandomSampler(
+        weights=sample_weights,
+        num_samples=len(sample_weights),
+        replacement=True,
+    )
+
+ 
+def mixup_batch(
+    spatial: torch.Tensor,
+    temporal: torch.Tensor,
+    labels: torch.Tensor,
+    alpha: float = 0.3,
+):
+    """
+    MixUp regularisation on a batch.
+    Blends pairs of samples and their labels.
+    alpha: Beta distribution parameter (higher = more mixing)
+    """
+    lam = np.random.beta(alpha, alpha)
+    B = spatial.size(0)
+    idx = torch.randperm(B)
+ 
+    mixed_spatial  = lam * spatial  + (1 - lam) * spatial[idx]
+    mixed_temporal = lam * temporal + (1 - lam) * temporal[idx]
+    mixed_labels   = lam * labels   + (1 - lam) * labels[idx]
+ 
+    return mixed_spatial, mixed_temporal, mixed_labels
+ 
