@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Data — large files, never commit raw videos or model weights
+data/raw/
+data/cache/
+data/snapshots/
+data/logs/
+data/quarantine/
+!data/raw/real/.gitkeep
+!data/raw/fake/.gitkeep
+!data/cache/.gitkeep
+!data/snapshots/.gitkeep
+!data/logs/.gitkeep
+
+# Model checkpoints & weights
+*.ckpt
+*.pth
+*.pt
+*.bin
+*.safetensors
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & coverage
+*.log
+htmlcov/
+.coverage
